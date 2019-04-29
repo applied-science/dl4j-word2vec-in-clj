@@ -124,42 +124,68 @@
 ;; cause IDE slowdowns if you print them to a REPL.
 
 ;; Step 3: Build dual-tree TSNE model
-(def tsne
-  (-> (BarnesHutTsne$Builder.)              
-      (.setMaxIter 100)
-      (.theta 0.5)
-      (.normalize false)
-      (.learningRate 500)
-      (.useAdaGrad false)
-      (.build)))
+(defn build-tsne
+  ([] (build-tsne 2))
+  ([dims]
+   (-> (BarnesHutTsne$Builder.)
+       (.setMaxIter 100)
+       (.theta 0.5)
+       (.normalize false)
+       (.learningRate 500)
+       (.useAdaGrad false)
+       (.numDimension dims)
+       (.build))))
+
+(comment
+
+  ;; Aside: a more robust wrapper might be something like this:
+  (defn build-tsne
+    "Builds a t-Distributed Stochastic Neighbor Embedding object using Barnes-Hut approximations, per the given configuration options."
+    [config]
+    (.build (cond-> (BarnesHutTsne$Builder.)
+              (:invert-distance-metric? config)    (.invertDistanceMetric (:invert-distance-metric? config))
+              (:learning-rate config)              (.learningRate (:learning-rate config)) 
+              (:min-gain config)                   (.minGain (:min-gain config)) 
+              (:normalize? config)                 (.normalize (:normalize? config))
+              (:num-dimensions config)             (.numDimension (:num-dimensions config))
+              (:perplexity config)                 (.perplexity (:perplexity config))
+              (:final-momentum config)             (.setFinalMomentum (:final-momentum config))
+              (:initial-momentum config)           (.setInitialMomentum (:initial-momentum config))
+              (:max-iterations config)             (.setMaxIter (:max-iterations config))
+              (:momentum config)                   (.setMomentum (:momentum config))
+              (:real-min config)                   (.setRealMin (:real-min config))
+              (:switch-momentum-iteration config)  (.setSwitchMomentumIteration (:switch-momentum-iteration config))
+              (:similarity-fn config)              (.similarityFunction (:similarity-fn config))
+              (:stop-lying-iteration config)       (.stopLyingIteration (:stop-lying-iteration config))
+              (:theta config)                      (.theta (:theta config))
+              (:tolerance config)                  (.tolerance (:tolerance config))
+              (:use-ada-grad? config)              (.useAdaGrad (:use-ada-grad? config))
+              (:vp-tree-workers config)            (.vpTreeWorkers (:vp-tree-workers config))
+              (:workspace-mode config)             (.workspaceMode (:workspace-mode config)))))
+
+  )
+
+(def words-tsne (build-tsne))
 
 ;; STEP 4: Establish the TSNE values
 ;; NB: careful, it could take a minute.
-(.fit tsne weights)
+(.fit words-tsne weights)
 
 ;; ...and save them to a file
 (io/make-parents "target/tsne-standard-coords.csv")
 
-(.saveAsFile tsne words "target/tsne-standard-coords.csv")
+(.saveAsFile words-tsne words "target/tsne-standard-coords.csv")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; now 3d
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def tsne3d
-  (-> (BarnesHutTsne$Builder.)
-      (.setMaxIter 100)
-      (.theta 0.5)
-      (.normalize false)
-      (.learningRate 500)
-      (.useAdaGrad false)
-      (.numDimension 3) ; <---- only change
-      (.build)))
+(def words-tsne-3d (build-tsne 3))
 
-(.fit tsne3d weights)
+(.fit words-tsne-3d weights)
 
-(.saveAsFile tsne3d words "target/tsne-standard-coords-3d.csv")
+(.saveAsFile words-tsne-3d words "target/tsne-standard-coords-3d.csv")
 
 
 
@@ -173,7 +199,7 @@
 ;; Get the data of all unique word vectors
 ;; ...`true` means try to read the extended model. For more see https://deeplearning4j.org/api/latest//org/deeplearning4j/models/embeddings/loader/WordVectorSerializer.html#readWord2VecModel-java.io.File-boolean-
 (def w2v
-  (WordVectorSerializer/readWord2VecModel "saved-word2vec-model.zip" true))
+  (WordVectorSerializer/readWord2VecModel "serialized-word2vec-model.zip" true))
 
 ;; Separate the weights of unique words into their own list
 (def w2v-weights
@@ -184,14 +210,7 @@
   (map str (.words (.vocab w2v))))
 
 ;; Build another dual-tree TSNE model
-(def w2v-tsne
-  (-> (BarnesHutTsne$Builder.)              
-      (.setMaxIter 100)
-      (.theta 0.5)
-      (.normalize false)
-      (.learningRate 500)
-      (.useAdaGrad false)
-      (.build)))
+(def w2v-tsne (build-tsne))
 
 ;; Establish the TSNE values
 (.fit w2v-tsne w2v-weights)
@@ -206,15 +225,7 @@
 ;; now 3d
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def tsne-w2v-3d
-  (-> (BarnesHutTsne$Builder.)
-      (.setMaxIter 100)
-      (.theta 0.5)
-      (.normalize false)
-      (.learningRate 500)
-      (.useAdaGrad false)
-      (.numDimension 3) ; <---- only change
-      (.build)))
+(def tsne-w2v-3d (build-tsne 3))
 
 (.fit tsne-w2v-3d w2v-weights)
 
