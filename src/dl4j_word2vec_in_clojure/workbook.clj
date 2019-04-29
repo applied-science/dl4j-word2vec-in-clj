@@ -15,22 +15,26 @@
            [org.deeplearning4j.plot BarnesHutTsne$Builder]))
 
 
+;;
+;;
+;; Please note that this workbook is intended as a supplement to
+;; "Exploring Word2Vec in Clojure with DL4J" at TODO. The code here
+;; will not make much sense on its own, because it is assumed you are
+;; evaluating sexps here merely to understand the contents of that
+;; blog post.
+;;
+;;
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Building the Model
-;;;; 
-;;;; Based on:
-;;;; https://deeplearning4j.org/docs/latest/deeplearning4j-nlp-word2vec#setup
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Let's look at the dataset. First go open it up in a text editor.
+;; Peek at the toy dataset
 (let [lines (string/split-lines (slurp "resources/raw_sentences.txt"))]
   (->> lines
        (drop (rand-int (count lines)))
        (take 10)))
-
-;; If you're matching this code to the original Java, note that I used
-;; the name `model` rather than the original `vec`, to avoid
-;; overloading `clojure.core/vec`.
 
 ;; Build word2vec model
 (def model ;; `vec` in the original Java
@@ -45,7 +49,7 @@
                            (.setTokenPreProcessor (CommonPreprocessor.))))
       (.build)))
 
-;; Fit word2vec model
+;; Build word2vec model over toy dataset
 ;; NB: may take a few seconds
 (.fit model)
 
@@ -65,19 +69,20 @@
 (.wordsNearest model "day" 10)
 ;; ["night" "week" "year" "game" "season" "group" "time" "office" "-" "director"]
 
-;; Cosine similarity of 'day' and 'night':  
+;; Cosine similarity of 'day' and 'night':
 (.similarity model "day" "night")
 ;; 0.7328975796699524
 
 (.wordsNearest model "man" 10)
 ;; ["program" "company" "director" "market" "political" "group" "general" "such" "family" "business"]
 
-;; This model doesn't support the classic "king - queen = man - woman" word vector arithmetic :(
+;; Toy dataset doesn't include the words "king" or "queen" so our model can't support the classic "king - queen = man - woman" word vector arithmetic :(
 (.wordsNearest model "king" 10)
 ;; []
 
 (.wordsNearest model "queen" 10)
 ;; []
+
 
 ;;;; Save our model for later
 ;; Deprecated old approach:
@@ -92,20 +97,10 @@
 ;;;; Visualizing saved word vectors
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; We'll use Barnes-Hut algorithm TSNE to visualize a sample dataset provided by DL4J.
+;; We use Barnes-Hut algorithm TSNE to visualize a sample dataset provided by DL4J.
 
-;; What is Barnes-Hut, you ask? Per [Laurens van der Maaten](https://lvdmaaten.github.io/tsne/):
-;; >"t-Distributed Stochastic Neighbor Embedding (t-SNE) is a
-;; >(prize-winning) technique for dimensionality reduction that is
-;; >particularly well suited for the visualization of high-dimensional
-;; >datasets. The technique can be implemented via Barnes-Hut
-;; >approximations, allowing it to be applied on large real-world
-;; >datasets."
-
-;; Step 1: get ready for an n-dimensional array of doubles
+;; Prepare for an n-dimensional array of doubles
 (Nd4j/setDataType DataBuffer$Type/DOUBLE)
-
-;; Step 2: Load the predefined vectors and separate the words from the weights
 
 ;; Get the data of all unique word vectors (from the provided dataset)
 (def vectors
@@ -123,7 +118,7 @@
 ;; doing the same with `weights` or `vectors`; they are big enough to
 ;; cause IDE slowdowns if you print them to a REPL.
 
-;; Step 3: Build dual-tree TSNE model
+;; Build dual-tree TSNE model
 (def words-tsne
   (-> (BarnesHutTsne$Builder.)
       (.setMaxIter 100)
@@ -133,7 +128,7 @@
       (.useAdaGrad false)
       (.build)))
 
-;; STEP 4: Establish the TSNE values
+;; Establish the TSNE values
 ;; NB: careful, it could take a minute.
 (.fit words-tsne weights)
 
@@ -142,10 +137,14 @@
 
 (.saveAsFile words-tsne words "target/tsne-standard-coords.csv")
 
+;; now use gnuplot to visualize that file
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; now 3d
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; helper fn
 (defn build-tsne
   ([] (build-tsne 2))
   ([dims]
@@ -164,35 +163,31 @@
 
 (.saveAsFile words-tsne-3d words "target/tsne-standard-coords-3d.csv")
 
+;; now use gnuplot to visualize that file
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Visualizing _our_ model
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; We've visualized words.txt, so now let's visualize our saved model
+;; We've visualized words.txt, so now we visualize our saved model
 ;; from earlier.
 
 ;; Get the data of all unique word vectors
-;; ...`true` means try to read the extended model. For more see https://deeplearning4j.org/api/latest//org/deeplearning4j/models/embeddings/loader/WordVectorSerializer.html#readWord2VecModel-java.io.File-boolean-
+;; the `true` parameter means "try to read the extended model". For more see https://deeplearning4j.org/api/latest//org/deeplearning4j/models/embeddings/loader/WordVectorSerializer.html#readWord2VecModel-java.io.File-boolean-
 (def w2v
   (WordVectorSerializer/readWord2VecModel "serialized-word2vec-model.zip" true))
 
-;; Separate the weights of unique words into their own list
 (def w2v-weights
   (.getSyn0 (.lookupTable w2v)))
 
-;; Separate strings of words into _their_ own list
 (def w2v-words
   (map str (.words (.vocab w2v))))
 
-;; Build another dual-tree TSNE model
 (def w2v-tsne (build-tsne))
 
-;; Establish the TSNE values
 (.fit w2v-tsne w2v-weights)
 
-;; ...and save them to a file
 (io/make-parents "target/tsne-w2v.csv")
 
 (.saveAsFile w2v-tsne w2v-words "target/tsne-w2v.csv")
@@ -215,12 +210,11 @@
 ;;;; Importing more comprehensive Models
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; No model built over the toy raw sentences corpus will be useful. If
-;; you don't believe me, look at how few words the model even
-;; contains:
+;; No model built over the toy raw sentences corpus will be useful,
+;; because it contains so few words:
 w2v-words
 
-;; So let's import a more robust model to see Word2Vec's true power.
+;; So we import a more robust model to see Word2Vec's true power.
 
 ;; (It may be necessary to reset your data type, depending on your REPL state.)
 (Nd4j/setDataType DataBuffer$Type/DOUBLE)
@@ -373,12 +367,9 @@ w2v-words
 ;;;; Domain-specific similarity
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; "Sweden equals Sweden, while Norway has a cosine distance of 0.760124 from Sweden, the highest of any other country."
 (.similarity gnews-vec "Sweden" "Sweden")
 
 (.similarity gnews-vec "Sweden" "Norway")
-
-;; "Here’s a list of words associated with “Sweden” using Word2vec, in order of proximity:"
 
 (->> (.words (.vocab gnews-vec))
      (take 10000) ;; <-- comment this out for true but compute-heavy
