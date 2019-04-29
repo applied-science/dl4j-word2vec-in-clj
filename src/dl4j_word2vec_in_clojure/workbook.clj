@@ -124,48 +124,14 @@
 ;; cause IDE slowdowns if you print them to a REPL.
 
 ;; Step 3: Build dual-tree TSNE model
-(defn build-tsne
-  ([] (build-tsne 2))
-  ([dims]
-   (-> (BarnesHutTsne$Builder.)
-       (.setMaxIter 100)
-       (.theta 0.5)
-       (.normalize false)
-       (.learningRate 500)
-       (.useAdaGrad false)
-       (.numDimension dims)
-       (.build))))
-
-(comment
-
-  ;; Aside: a more robust wrapper might be something like this:
-  (defn build-tsne
-    "Builds a t-Distributed Stochastic Neighbor Embedding object using Barnes-Hut approximations, per the given configuration options."
-    [config]
-    (.build (cond-> (BarnesHutTsne$Builder.)
-              (:invert-distance-metric? config)    (.invertDistanceMetric (:invert-distance-metric? config))
-              (:learning-rate config)              (.learningRate (:learning-rate config)) 
-              (:min-gain config)                   (.minGain (:min-gain config)) 
-              (:normalize? config)                 (.normalize (:normalize? config))
-              (:num-dimensions config)             (.numDimension (:num-dimensions config))
-              (:perplexity config)                 (.perplexity (:perplexity config))
-              (:final-momentum config)             (.setFinalMomentum (:final-momentum config))
-              (:initial-momentum config)           (.setInitialMomentum (:initial-momentum config))
-              (:max-iterations config)             (.setMaxIter (:max-iterations config))
-              (:momentum config)                   (.setMomentum (:momentum config))
-              (:real-min config)                   (.setRealMin (:real-min config))
-              (:switch-momentum-iteration config)  (.setSwitchMomentumIteration (:switch-momentum-iteration config))
-              (:similarity-fn config)              (.similarityFunction (:similarity-fn config))
-              (:stop-lying-iteration config)       (.stopLyingIteration (:stop-lying-iteration config))
-              (:theta config)                      (.theta (:theta config))
-              (:tolerance config)                  (.tolerance (:tolerance config))
-              (:use-ada-grad? config)              (.useAdaGrad (:use-ada-grad? config))
-              (:vp-tree-workers config)            (.vpTreeWorkers (:vp-tree-workers config))
-              (:workspace-mode config)             (.workspaceMode (:workspace-mode config)))))
-
-  )
-
-(def words-tsne (build-tsne))
+(def words-tsne
+  (-> (BarnesHutTsne$Builder.)
+      (.setMaxIter 100)
+      (.theta 0.5)
+      (.normalize false)
+      (.learningRate 500)
+      (.useAdaGrad false)
+      (.build)))
 
 ;; STEP 4: Establish the TSNE values
 ;; NB: careful, it could take a minute.
@@ -180,6 +146,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; now 3d
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn build-tsne
+  ([] (build-tsne 2))
+  ([dims]
+   (-> (BarnesHutTsne$Builder.)
+       (.setMaxIter 100)
+       (.theta 0.5)
+       (.normalize false)
+       (.learningRate 500)
+       (.useAdaGrad false)
+       (.numDimension dims)
+       (.build))))
 
 (def words-tsne-3d (build-tsne 3))
 
@@ -225,11 +202,11 @@
 ;; now 3d
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def tsne-w2v-3d (build-tsne 3))
+(def w2v-tsne-3d (build-tsne 3))
 
-(.fit tsne-w2v-3d w2v-weights)
+(.fit w2v-tsne-3d w2v-weights)
 
-(.saveAsFile tsne-w2v-3d w2v-words "target/tsne-w2v-3d.csv")
+(.saveAsFile w2v-tsne-3d w2v-words "target/tsne-w2v-3d.csv")
 
 
 
