@@ -219,6 +219,8 @@ w2v-words
 ;; (It may be necessary to reset your data type, depending on your REPL state.)
 (Nd4j/setDataType DataBuffer$Type/DOUBLE)
 
+;; URL for google news corpus: https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz
+
 ;; Warning: can be compute-heavy (read: sssslllooooowwwww)
 (def gnews-vec
   (WordVectorSerializer/readWord2VecModel "/path/to/GoogleNews-vectors-negative300.bin.gz"))
@@ -246,6 +248,8 @@ w2v-words
 ;;;; GloVe: Global Vectors
 ;;;; https://deeplearning4j.org/docs/latest/deeplearning4j-nlp-word2vec#glove
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; dataset URL: http://nlp.stanford.edu/data/glove.6B.zip
 
 (def glove-vectors
   (WordVectorSerializer/loadTxtVectors (io/file "/path/to/glove.6B.50d.txt")))
